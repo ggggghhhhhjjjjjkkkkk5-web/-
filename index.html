@@ -66,13 +66,14 @@ h1{font-size:25px;margin:0 0 12px}
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
+const API_BASE="https://padafand-admin-panel-frankfurt.onrender.com";
 const remoteConfig={missilePrice:10,gameTitle:"فرماندهی پدافند",announcement:""};
 function getPlayerId(){try{let id=localStorage.getItem("padafandPlayerId");if(!id){id="p_"+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,""):Math.random().toString(36).slice(2)+Date.now());localStorage.setItem("padafandPlayerId",id)}return id}catch(e){return "p_"+Math.random().toString(36).slice(2)+Date.now()}}
 const playerId=getPlayerId();
 let lastHeartbeat=0;
-async function postGameData(url,data={}){try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data),keepalive:true});return r.ok}catch(e){return false}}
+async function postGameData(url,data={}){try{const r=await fetch(API_BASE+url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data),keepalive:true});return r.ok}catch(e){return false}}
 async function sendHeartbeat(force=false){const now=Date.now();if(!force&&now-lastHeartbeat<18000)return;lastHeartbeat=now;await postGameData("/api/heartbeat",{playerId,score,best:bestScore,playing});}
-async function loadRemoteConfig(){try{const r=await fetch("/api/config",{cache:"no-store"});if(!r.ok)return;const d=await r.json();Object.assign(remoteConfig,d||{});if(remoteConfig.gameTitle)document.title=remoteConfig.gameTitle;if(remoteConfig.announcement)$("remote-events").textContent=remoteConfig.announcement;const ev=await fetch("/api/events",{cache:"no-store"});if(ev.ok){const items=await ev.json();if(items.length)$("remote-events").textContent=[remoteConfig.announcement,...items.map(x=>x.title+(x.description?" — "+x.description:""))].filter(Boolean).join(" | ")}}catch(e){}}
+async function loadRemoteConfig(){try{const r=await fetch(API_BASE+"/api/config",{cache:"no-store"});if(!r.ok)return;const d=await r.json();Object.assign(remoteConfig,d||{});if(remoteConfig.gameTitle)document.title=remoteConfig.gameTitle;if(remoteConfig.announcement)$("remote-events").textContent=remoteConfig.announcement;const ev=await fetch(API_BASE+"/api/events",{cache:"no-store"});if(ev.ok){const items=await ev.json();if(items.length)$("remote-events").textContent=[remoteConfig.announcement,...items.map(x=>x.title+(x.description?" — "+x.description:""))].filter(Boolean).join(" | ")}}catch(e){}}
 loadRemoteConfig();
 setInterval(()=>{sendHeartbeat();loadRemoteConfig()},20000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sendHeartbeat(true);else sendHeartbeat(true)});
