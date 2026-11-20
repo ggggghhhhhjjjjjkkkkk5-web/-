@@ -25,8 +25,8 @@ async function init(){
  CREATE UNIQUE INDEX IF NOT EXISTS padafand_players_username_uq ON padafand_players(LOWER(username)) WHERE username IS NOT NULL;
  CREATE TABLE IF NOT EXISTS padafand_game_events(id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',starts_at TIMESTAMPTZ,ends_at TIMESTAMPTZ,active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
  CREATE TABLE IF NOT EXISTS padafand_game_settings(id INT PRIMARY KEY DEFAULT 1,data JSONB NOT NULL DEFAULT '{}'::jsonb,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
- INSERT INTO padafand_game_settings(id,data) VALUES(1,$1::jsonb) ON CONFLICT(id) DO NOTHING;
- `,[JSON.stringify(defaults)]);
+ INSERT INTO padafand_game_settings(id,data) VALUES(1,'{"missilePrice":10,"gameTitle":"فرماندهی پدافند","announcement":"","rewardPerHit":1,"maxErrors":3,"startingCoins":0,"shopEnabled":true,"gameEnabled":true}'::jsonb) ON CONFLICT(id) DO NOTHING;
+ `);
 }
 app.get("/api/health",(req,res)=>res.json({ok:true}));
 app.get("/api/config",async(req,res)=>{try{const r=await pool.query("SELECT data FROM padafand_game_settings WHERE id=1");res.json({...defaults,...(r.rows[0]?.data||{})});}catch(e){res.status(500).json({error:"config"});}});
