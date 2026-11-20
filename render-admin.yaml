@@ -5,9 +5,10 @@ databases:
     plan: free
 services:
   - type: web
-    name: padafand-admin-panel
+    name: padafand-admin-panel-frankfurt
     runtime: node
     plan: free
+    region: frankfurt
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
