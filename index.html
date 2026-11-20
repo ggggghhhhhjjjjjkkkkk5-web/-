@@ -54,7 +54,8 @@ h1{font-size:25px;margin:0 0 12px}
   <div class="options"><button id="upgrade">✦ ارتقا لانچر</button><button id="shop">▦ فروشگاه</button></div>
   <button id="channel">📢 کانال بازی</button><button class="start" id="start">شروع بازی ←</button>
  </div>
- <div class="menu-footer">آماده‌سازی سامانه دفاع هوایی</div>\n <div id="remote-events" class="menu-footer"></div>
+ <div class="menu-footer">آماده‌سازی سامانه دفاع هوایی</div>
+ <div id="remote-events" class="menu-footer"></div>
 </section>
 <div id="hud" class="hidden"><div id="score">امتیاز: ۰</div><div id="best">رکورد: ۰</div><div id="status">خطا: ۰/۳</div><div id="wallet">🪙 سکه: ۰</div></div>
 <button id="ammo-count" class="hidden" type="button" aria-pressed="false">🚀 موشک رهگیر: ۰</button>
@@ -121,8 +122,11 @@ function startGame(){GameAudio.init();playing=true;score=0;errors=0;angle=-Math.
 $("start").onclick=startGame;
 $("back").onclick=()=>{playing=false;keys.left=false;keys.right=false;$("menu").classList.remove("hidden");$("controls").classList.add("hidden");$("hud").classList.add("hidden");$("ammo-count").classList.add("hidden");$("back").classList.add("hidden");$("dialog").classList.add("hidden")};
 $("upgrade").onclick=()=>showDialog("ارتقا لانچر","بخش ارتقای لانچر هنوز فعال نیست.");
-$("shop").onclick=()=>{$("dialog-title").textContent="فروشگاه تجهیزات";$("dialog-text").textContent="موجودی سکه: "+coins+" | موشک رهگیر: "+homingAmmo+"\nهر موشک رهگیر ۱۰ سکه است. موشک خریداری‌شده در شلیک بعدی استفاده می‌شود.";$("dialog-text").style.whiteSpace="pre-line";$("dialog-restart").classList.add("hidden");$("shop-buy").classList.remove("hidden");$("dialog").classList.remove("hidden")};
-$("shop-buy").onclick=()=>{const missilePrice=Math.max(1,Number(remoteConfig.missilePrice)||10);\n if(coins<missilePrice){$("dialog-text").textContent="سکه کافی نداری. موجودی فعلی: "+coins+" سکه. با هر برخورد موفق، ۱ سکه می‌گیری.";return}coins-=missilePrice;homingAmmo++;saveWallet();updateWallet();$("dialog-text").textContent="موشک رهگیر با موفقیت خریداری شد.\nموجودی سکه: "+coins+" | موشک رهگیر: "+homingAmmo};
+$("shop").onclick=()=>{$("dialog-title").textContent="فروشگاه تجهیزات";$("dialog-text").textContent="موجودی سکه: "+coins+" | موشک رهگیر: "+homingAmmo+"
+هر موشک رهگیر ۱۰ سکه است. موشک خریداری‌شده در شلیک بعدی استفاده می‌شود.";$("dialog-text").style.whiteSpace="pre-line";$("dialog-restart").classList.add("hidden");$("shop-buy").classList.remove("hidden");$("dialog").classList.remove("hidden")};
+$("shop-buy").onclick=()=>{const missilePrice=Math.max(1,Number(remoteConfig.missilePrice)||10);
+ if(coins<missilePrice){$("dialog-text").textContent="سکه کافی نداری. موجودی فعلی: "+coins+" سکه. با هر برخورد موفق، ۱ سکه می‌گیری.";return}coins-=missilePrice;homingAmmo++;saveWallet();updateWallet();$("dialog-text").textContent="موشک رهگیر با موفقیت خریداری شد.
+موجودی سکه: "+coins+" | موشک رهگیر: "+homingAmmo};
 function holdButton(id,key){const btn=$(id);btn.addEventListener("pointerdown",e=>{e.preventDefault();keys[key]=true;try{btn.setPointerCapture(e.pointerId)}catch(_){}});["pointerup","pointercancel","lostpointercapture"].forEach(ev=>btn.addEventListener(ev,()=>{keys[key]=false}))}
 holdButton("left","left");holdButton("right","right");
 $("ammo-count").addEventListener("click",()=>{if(!homingMode){if(homingAmmo<=0){updateWallet();return}homingMode=true}else{homingMode=false}updateWallet()});
