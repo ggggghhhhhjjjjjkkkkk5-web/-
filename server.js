@@ -5,6 +5,8 @@ const path=require("path");
 const app=express();
 app.set("trust proxy",1);
 app.use(express.json({limit:"32kb"}));
+app.use("/api",(req,res,next)=>{res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");res.setHeader("Access-Control-Allow-Headers","Content-Type,Authorization");if(req.method==="OPTIONS")return res.sendStatus(204);next();});
+
 const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_URL?.includes("localhost")?false:{rejectUnauthorized:false}});
 const PORT=process.env.PORT||3000;
 const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD;
