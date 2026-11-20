@@ -36,6 +36,9 @@ jobs:
         run: npx cap add android
       - name: Sync Android project
         run: npx cap sync android
+      - name: Add Maven Central mirror
+        run: |
+          sed -i 's#mavenCentral()#maven { url "https://maven-central.storage-download.googleapis.com/maven2" }; mavenCentral()#g' android/build.gradle
       - name: Build APK
         working-directory: android
         run: |
