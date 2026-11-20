@@ -66,6 +66,18 @@ h1{font-size:25px;margin:0 0 12px}
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
+const remoteConfig={missilePrice:10,gameTitle:"فرماندهی پدافند",announcement:""};
+function getPlayerId(){try{let id=localStorage.getItem("padafandPlayerId");if(!id){id="p_"+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,""):Math.random().toString(36).slice(2)+Date.now());localStorage.setItem("padafandPlayerId",id)}return id}catch(e){return "p_"+Math.random().toString(36).slice(2)+Date.now()}}
+const playerId=getPlayerId();
+let lastHeartbeat=0;
+async function postGameData(url,data={}){try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data),keepalive:true});return r.ok}catch(e){return false}}
+async function sendHeartbeat(force=false){const now=Date.now();if(!force&&now-lastHeartbeat<18000)return;lastHeartbeat=now;await postGameData("/api/heartbeat",{playerId,score,best:bestScore,playing});}
+async function loadRemoteConfig(){try{const r=await fetch("/api/config",{cache:"no-store"});if(!r.ok)return;const d=await r.json();Object.assign(remoteConfig,d||{});if(remoteConfig.gameTitle)document.title=remoteConfig.gameTitle;if(remoteConfig.announcement)$("remote-events").textContent=remoteConfig.announcement;const ev=await fetch("/api/events",{cache:"no-store"});if(ev.ok){const items=await ev.json();if(items.length)$("remote-events").textContent=[remoteConfig.announcement,...items.map(x=>x.title+(x.description?" — "+x.description:""))].filter(Boolean).join(" | ")}}catch(e){}}
+loadRemoteConfig();
+setInterval(()=>{sendHeartbeat();loadRemoteConfig()},20000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)sendHeartbeat(true);else sendHeartbeat(true)});
+window.addEventListener("pagehide",()=>{const body=JSON.stringify({playerId,score,best:bestScore,playing:false});try{navigator.sendBeacon("/api/heartbeat",new Blob([body],{type:"application/json"}))}catch(e){}});
+
 const GameAudio=(()=>{
  let audioContext=null,masterGain=null;
  function init(){try{if(!audioContext){const AudioClass=window.AudioContext||window.webkitAudioContext;if(!AudioClass)return false;audioContext=new AudioClass();masterGain=audioContext.createGain();masterGain.gain.value=0.65;masterGain.connect(audioContext.destination)}if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});return true}catch(e){return false}}
@@ -96,7 +108,7 @@ function initStars(){stars.length=0;for(let i=0;i<Math.ceil(W*H/6500);i++)stars.
 initStars();addEventListener("resize",initStars);
 function updateScore(){$("score").textContent="امتیاز: "+score;if(score>bestScore){bestScore=score;try{localStorage.setItem("launcherBest",String(bestScore))}catch(e){}}$("best").textContent="رکورد: "+bestScore}
 function updateErrors(){$("status").textContent="خطا: "+errors+"/"+maxErrors;if(errors>=maxErrors)endGame()}
-function endGame(){if(!playing)return;playing=false;keys.left=false;keys.right=false;GameAudio.gameOver();$("dialog-title").textContent="پایان بازی";$("dialog-text").textContent="سه خطا ثبت شد. امتیاز این مرحله: "+score+" | رکورد: "+bestScore;$("dialog").classList.remove("hidden");$("controls").classList.add("hidden");$("ammo-count").classList.add("hidden")}
+function endGame(){if(!playing)return;playing=false;sendHeartbeat(true);keys.left=false;keys.right=false;GameAudio.gameOver();$("dialog-title").textContent="پایان بازی";$("dialog-text").textContent="سه خطا ثبت شد. امتیاز این مرحله: "+score+" | رکورد: "+bestScore;$("dialog").classList.remove("hidden");$("controls").classList.add("hidden");$("ammo-count").classList.add("hidden")}
 function showDialog(title,text){$("dialog-title").textContent=title;$("dialog-text").textContent=text;$("dialog-restart").classList.add("hidden");$("shop-buy").classList.add("hidden");$("dialog").classList.remove("hidden")}
 $("dialog-close").onclick=()=>{$("dialog").classList.add("hidden");$("shop-buy").classList.add("hidden");$("dialog-text").style.whiteSpace="normal";if(!playing){$("menu").classList.remove("hidden");$("hud").classList.add("hidden");$("back").classList.add("hidden");$("controls").classList.add("hidden");$("ammo-count").classList.add("hidden")}};
 $("dialog-restart").onclick=()=>{$("dialog").classList.add("hidden");startGame()};
@@ -118,9 +130,9 @@ function drawEffects(step){for(let i=smoke.length-1;i>=0;i--){const s=smoke[i];s
 function updatePhysics(step){bodyVelocity+=-bodyOffset*.14*step;bodyVelocity*=Math.pow(.78,step);bodyOffset+=bodyVelocity*step;compressionVelocity+=-compression*.20*step;compressionVelocity*=Math.pow(.72,step);compression=Math.max(0,Math.min(.95,compression+compressionVelocity*step));recoilVelocity+=-recoil*.22*step;recoilVelocity*=Math.pow(.68,step);recoil+=recoilVelocity*step;flash*=Math.pow(.72,step);if(flash<.02)flash=0}
 function loop(now=0){requestAnimationFrame(loop);const dt=lastTime?Math.min(now-lastTime,40):16.67;lastTime=now;const step=dt/16.67;background();if(playing){if(keys.left)targetAngle-=.045*step;if(keys.right)targetAngle+=.045*step;targetAngle=Math.max(-Math.PI+.12,Math.min(-.08,targetAngle));angle+=(targetAngle-angle)*Math.min(1,.18*step);updatePhysics(step);updateFighter(step,dt);drawFighter();drawEffects(step);updateMissiles(step);drawLauncher()}else{updatePhysics(step);drawEffects(step);drawLauncher()}}
 requestAnimationFrame(loop);
-function startGame(){GameAudio.init();playing=true;score=0;errors=0;angle=-Math.PI/2;targetAngle=angle;bodyOffset=0;bodyVelocity=0;compression=0;compressionVelocity=0;recoil=0;recoilVelocity=0;flash=0;lastShot=0;missiles.length=0;particles.length=0;smoke.length=0;fighter.alive=true;fighter.x=60;fighter.y=85;fighter.vx=2;fighter.respawn=0;fighter.phase=0;updateScore();updateErrors();$("menu").classList.add("hidden");$("dialog").classList.add("hidden");$("controls").classList.remove("hidden");$("hud").classList.remove("hidden");$("ammo-count").classList.remove("hidden");$("back").classList.remove("hidden");positionAmmo()}
+function startGame(){GameAudio.init();playing=true;score=0;sendHeartbeat(true);postGameData("/api/game-start",{playerId});errors=0;angle=-Math.PI/2;targetAngle=angle;bodyOffset=0;bodyVelocity=0;compression=0;compressionVelocity=0;recoil=0;recoilVelocity=0;flash=0;lastShot=0;missiles.length=0;particles.length=0;smoke.length=0;fighter.alive=true;fighter.x=60;fighter.y=85;fighter.vx=2;fighter.respawn=0;fighter.phase=0;updateScore();updateErrors();$("menu").classList.add("hidden");$("dialog").classList.add("hidden");$("controls").classList.remove("hidden");$("hud").classList.remove("hidden");$("ammo-count").classList.remove("hidden");$("back").classList.remove("hidden");positionAmmo()}
 $("start").onclick=startGame;
-$("back").onclick=()=>{playing=false;keys.left=false;keys.right=false;$("menu").classList.remove("hidden");$("controls").classList.add("hidden");$("hud").classList.add("hidden");$("ammo-count").classList.add("hidden");$("back").classList.add("hidden");$("dialog").classList.add("hidden")};
+$("back").onclick=()=>{playing=false;sendHeartbeat(true);keys.left=false;keys.right=false;$("menu").classList.remove("hidden");$("controls").classList.add("hidden");$("hud").classList.add("hidden");$("ammo-count").classList.add("hidden");$("back").classList.add("hidden");$("dialog").classList.add("hidden")};
 $("upgrade").onclick=()=>showDialog("ارتقا لانچر","بخش ارتقای لانچر هنوز فعال نیست.");
 $("shop").onclick=()=>{$("dialog-title").textContent="فروشگاه تجهیزات";$("dialog-text").textContent="موجودی سکه: "+coins+" | موشک رهگیر: "+homingAmmo+"
 هر موشک رهگیر ۱۰ سکه است. موشک خریداری‌شده در شلیک بعدی استفاده می‌شود.";$("dialog-text").style.whiteSpace="pre-line";$("dialog-restart").classList.add("hidden");$("shop-buy").classList.remove("hidden");$("dialog").classList.remove("hidden")};
