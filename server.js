@@ -95,6 +95,7 @@ app.post("/api/admin/events",requireAdmin,async(req,res)=>{
 app.patch("/api/admin/events/:id",requireAdmin,async(req,res)=>{
  try{const r=await pool.query("UPDATE game_events SET active=$1 WHERE id=$2 RETURNING *",[!!req.body?.active,Number(req.params.id)]);res.json(r.rows[0]||{});}catch(e){res.status(500).end();}
 });
+app.get("/admin-sw.js",(req,res)=>{res.setHeader("Service-Worker-Allowed","/admin");res.sendFile(path.join(__dirname,"admin-sw.js"));});
 app.use(express.static(path.join(__dirname)));
 app.get("/admin",(req,res)=>res.sendFile(path.join(__dirname,"admin.html")));
 app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"index.html")));
