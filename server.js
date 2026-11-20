@@ -17,12 +17,12 @@ async function init(){
  player_id TEXT PRIMARY KEY,username TEXT,first_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  last_score INT NOT NULL DEFAULT 0,best_score INT NOT NULL DEFAULT 0,games INT NOT NULL DEFAULT 0,is_playing BOOLEAN NOT NULL DEFAULT FALSE,
  coins INT NOT NULL DEFAULT 0,homing_ammo INT NOT NULL DEFAULT 0,blocked BOOLEAN NOT NULL DEFAULT FALSE,block_reason TEXT NOT NULL DEFAULT '');
- CREATE UNIQUE INDEX IF NOT EXISTS padafand_players_username_uq ON padafand_players(LOWER(username)) WHERE username IS NOT NULL;
  ALTER TABLE padafand_players ADD COLUMN IF NOT EXISTS username TEXT;
  ALTER TABLE padafand_players ADD COLUMN IF NOT EXISTS coins INT NOT NULL DEFAULT 0;
  ALTER TABLE padafand_players ADD COLUMN IF NOT EXISTS homing_ammo INT NOT NULL DEFAULT 0;
  ALTER TABLE padafand_players ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE;
  ALTER TABLE padafand_players ADD COLUMN IF NOT EXISTS block_reason TEXT NOT NULL DEFAULT '';
+ CREATE UNIQUE INDEX IF NOT EXISTS padafand_players_username_uq ON padafand_players(LOWER(username)) WHERE username IS NOT NULL;
  CREATE TABLE IF NOT EXISTS padafand_game_events(id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',starts_at TIMESTAMPTZ,ends_at TIMESTAMPTZ,active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
  CREATE TABLE IF NOT EXISTS padafand_game_settings(id INT PRIMARY KEY DEFAULT 1,data JSONB NOT NULL DEFAULT '{}'::jsonb,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
  INSERT INTO padafand_game_settings(id,data) VALUES(1,$1::jsonb) ON CONFLICT(id) DO NOTHING;
@@ -59,7 +59,7 @@ app.post("/api/wallet",async(req,res)=>{
  }catch(e){res.status(500).json({error:"wallet"});}
 });
 app.get("/api/events",async(req,res)=>{try{const r=await pool.query("SELECT id,title,description,starts_at,ends_at FROM padafand_game_events WHERE active=TRUE AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY created_at DESC LIMIT 5");res.json(r.rows);}catch(e){res.status(500).json([]);}});
-app.post("/api/game-start",async(req,res)=>{const {playerId}=req.body||{};try{const r=await pool.query("UPDATE padafand_players SET games=games+1,is_playing=TRUE,last_seen=NOW() WHERE player_id=$1 AND blocked=FALSE",[playerId]);if(!r.rowCount)return res.status(403).json({error:"دسترسی مجاز نیست"});res.json({ok:true});}catch(e){res.status(500).end();}});
+app.post("/api/game-start",async(req,res)=>{const {playerId}=req.body||{};try{const cfg=await pool.query("SELECT data FROM padafand_game_settings WHERE id=1");if(cfg.rows[0]?.data?.gameEnabled===false)return res.status(403).json({error:"بازی موقتاً غیرفعال است"});const r=await pool.query("UPDATE padafand_players SET games=games+1,is_playing=TRUE,last_seen=NOW() WHERE player_id=$1 AND blocked=FALSE",[playerId]);if(!r.rowCount)return res.status(403).json({error:"دسترسی مجاز نیست"});res.json({ok:true});}catch(e){res.status(500).end();}});
 app.post("/api/admin/login",(req,res)=>{const pass=String(req.body?.password||""),a=Buffer.from(pass),b=Buffer.from(ADMIN_PASSWORD||"");if(!ADMIN_PASSWORD||a.length!==b.length||!crypto.timingSafeEqual(a,b))return res.status(401).json({error:"رمز عبور اشتباه است"});const id=crypto.randomBytes(24).toString("hex"),token=id+"."+sign(id);activeTokens.add(token);res.json({token});});
 app.post("/api/admin/logout",requireAdmin,(req,res)=>{activeTokens.delete((req.headers.authorization||"").replace(/^Bearer /,""));res.json({ok:true});});
 app.get("/api/admin/stats",requireAdmin,async(req,res)=>{try{const [tot,online,today,leaders,events,settings]=await Promise.all([
