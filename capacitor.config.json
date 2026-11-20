@@ -1,0 +1,9 @@
+{
+  "appId": "com.company.padafand",
+  "appName": "فرماندهی پدافند",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
