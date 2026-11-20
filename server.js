@@ -49,7 +49,7 @@ app.post("/api/heartbeat",async(req,res)=>{
  try{
   await pool.query(`INSERT INTO padafand_players(player_id,last_seen,last_score,best_score,games,is_playing)
   VALUES($1,NOW(),$2,$3,0,$4) ON CONFLICT(player_id) DO UPDATE SET last_seen=NOW(),
-  last_score=EXCLUDED.last_score,best_score=GREATEST(players.best_score,EXCLUDED.best_score),
+  last_score=EXCLUDED.last_score,best_score=GREATEST(padafand_players.best_score,EXCLUDED.best_score),
   is_playing=EXCLUDED.is_playing`,[playerId,s,b,!!playing]);
   res.json({ok:true});
  }catch(e){res.status(500).json({error:"heartbeat"});}
@@ -70,7 +70,7 @@ app.post("/api/admin/logout",requireAdmin,(req,res)=>{activeTokens.delete((req.h
 app.get("/api/admin/stats",requireAdmin,async(req,res)=>{
  try{
  const [tot,online,today,leaders,events,settings]=await Promise.all([
-  pool.query("SELECT COUNT(*)::int AS total, COALESCE(SUM(games),0)::int AS games FROM players"),
+  pool.query("SELECT COUNT(*)::int AS total, COALESCE(SUM(games),0)::int AS games FROM padafand_players"),
   pool.query("SELECT COUNT(*)::int AS count FROM padafand_players WHERE last_seen>NOW()-INTERVAL '90 seconds'"),
   pool.query("SELECT COUNT(*)::int AS count FROM padafand_players WHERE first_seen>=CURRENT_DATE"),
   pool.query("SELECT player_id,best_score,games,last_seen FROM padafand_players ORDER BY best_score DESC LIMIT 30"),
