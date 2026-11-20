@@ -54,7 +54,8 @@ app.post("/api/heartbeat",async(req,res)=>{
   res.json({ok:true});
  }catch(e){res.status(500).json({error:"heartbeat"});}
 });
-app.get("/api/events",async(req,res)=>{try{const r=await pool.query("SELECT id,title,description,starts_at,ends_at FROM game_events WHERE active=TRUE AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY created_at DESC LIMIT 5");res.json(r.rows);}catch(e){res.status(500).json([]);}});\napp.post("/api/game-start",async(req,res)=>{
+app.get("/api/events",async(req,res)=>{try{const r=await pool.query("SELECT id,title,description,starts_at,ends_at FROM game_events WHERE active=TRUE AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY created_at DESC LIMIT 5");res.json(r.rows);}catch(e){res.status(500).json([]);}});
+app.post("/api/game-start",async(req,res)=>{
  const {playerId}=req.body||{};if(typeof playerId!=="string")return res.status(400).end();
  try{await pool.query("UPDATE players SET games=games+1,is_playing=TRUE,last_seen=NOW() WHERE player_id=$1",[playerId]);res.json({ok:true});}catch(e){res.status(500).end();}
 });
