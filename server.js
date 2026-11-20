@@ -35,7 +35,7 @@ app.post("/api/register",async(req,res)=>{
  if(!/^p_[a-zA-Z0-9_-]{8,100}$/.test(playerId)||!/^[\p{L}\p{N}_-]{3,18}$/u.test(username))return res.status(400).json({error:"نام کاربری باید ۳ تا ۱۸ حرف، عدد یا _ و - باشد."});
  try{
   const existing=await pool.query("SELECT player_id,username,coins,homing_ammo,blocked,block_reason FROM padafand_players WHERE player_id=$1",[playerId]);
-  if(existing.rowCount){const p=existing.rows[0];if(p.username&&p.username.toLowerCase()!==username.toLowerCase())return res.status(409).json({error:"این دستگاه قبلاً نام کاربری دیگری ثبت کرده است."});if(p.blocked)return res.status(403).json({error:p.block_reason||"دسترسی شما محدود شده است."});return res.json({ok:true,...p});}
+  if(existing.rowCount){let p=existing.rows[0];if(p.username&&p.username.toLowerCase()!==username.toLowerCase())return res.status(409).json({error:"این دستگاه قبلاً نام کاربری دیگری ثبت کرده است."});if(p.blocked)return res.status(403).json({error:p.block_reason||"دسترسی شما محدود شده است."});if(!p.username){const u=await pool.query("UPDATE padafand_players SET username=$2 WHERE player_id=$1 RETURNING player_id,username,coins,homing_ammo,blocked,block_reason",[playerId,username]);p=u.rows[0];}return res.json({ok:true,...p});}
   const r=await pool.query("INSERT INTO padafand_players(player_id,username,coins) VALUES($1,$2,$3) RETURNING player_id,username,coins,homing_ammo,blocked,block_reason",[playerId,username,defaults.startingCoins]);
   res.json({ok:true,...r.rows[0]});
  }catch(e){if(e.code==="23505")return res.status(409).json({error:"این نام کاربری قبلاً انتخاب شده است."});res.status(500).json({error:"ثبت نام انجام نشد"});}
